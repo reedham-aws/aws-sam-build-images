@@ -1,6 +1,5 @@
 ARG IMAGE_ARCH
-# TODO (hawflau): remove preview tag
-FROM public.ecr.aws/lambda/java:25-$IMAGE_ARCH
+FROM public.ecr.aws/lambda/ruby:4.0-$IMAGE_ARCH
 
 RUN dnf remove -y microdnf-dnf && \
   microdnf install -y dnf
@@ -18,11 +17,14 @@ RUN dnf groupinstall -y development && \
   binutils \
   gcc-c++ \
   procps \
-  libmpc-devel \
   gmp-devel \
   zlib-devel \
+  libmpc-devel \
   python3-devel \
+  libyaml-devel \
   && dnf clean all
+
+RUN dnf upgrade -y --releasever=latest
 
 # Install AWS CLI
 ARG AWS_CLI_ARCH
@@ -55,25 +57,7 @@ ENV LANG=en_US.UTF-8
 # Python for it to be picked up during `sam build`
 RUN uv pip install --python /usr/local/opt/lambda-builders wheel==0.45.1
 
-# Setup Java Home
-
-ENV JAVA_HOME="/var/lang"
-
-# Install Java build tools
-RUN mkdir /usr/local/gradle && curl -L -o gradle.zip https://downloads.gradle.org/distributions/gradle-9.2.0-bin.zip && \
-  unzip -d /usr/local/gradle gradle.zip && rm gradle.zip && mkdir /usr/local/maven && \
-  curl -L https://archive.apache.org/dist/maven/maven-3/3.9.16/binaries/apache-maven-3.9.16-bin.tar.gz | \
-  tar -zx -C /usr/local/maven
-
-ENV PATH="/usr/local/gradle/gradle-9.2.0/bin:/usr/local/maven/apache-maven-3.9.16/bin:${PATH}"
-
 COPY ATTRIBUTION.txt /
-
-# Set following GRADLE_OPTS and MAVEN_OPTS for Java 25 compatibility
-# VFORK is deprecated in Java 25, use FORK instead
-# Set Gradle user home to a writable location
-ENV GRADLE_OPTS="-Dgradle.user.home=/tmp -Djdk.lang.Process.launchMechanism=FORK --enable-native-access=ALL-UNNAMED"
-ENV MAVEN_OPTS="-Djdk.lang.Process.launchMechanism=FORK --enable-native-access=ALL-UNNAMED"
 
 # Compatible with initial base image
 ENTRYPOINT []
